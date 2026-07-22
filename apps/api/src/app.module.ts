@@ -1,10 +1,26 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { RequestIdMiddleware } from './common/request-id.middleware';
+import { LoggerModule } from 'nestjs-pino';
+import { APP_FILTER } from '@nestjs/core';
+import { GlobalExceptionFilter } from './exception-filter';
 
 @Module({
-  imports: [],
+  imports: [LoggerModule.forRoot()],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService , 
+    {
+      provide:APP_FILTER,
+      useClass:GlobalExceptionFilter
+    }
+  ],
+  
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(RequestIdMiddleware)
+      .forRoutes('*');
+  }
+}
