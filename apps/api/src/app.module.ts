@@ -7,9 +7,14 @@ import { APP_FILTER } from '@nestjs/core';
 import { GlobalExceptionFilter } from './exception-filter';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from 'prisma/prisma.module';
+import { validateEnv } from './config/env.validation';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [LoggerModule.forRoot(), AuthModule,PrismaModule],
+  imports: [ConfigModule.forRoot({
+      isGlobal: true,
+      validate: validateEnv,
+    }),LoggerModule.forRoot(), AuthModule,PrismaModule],
   controllers: [AppController],
   providers: [AppService , 
     {

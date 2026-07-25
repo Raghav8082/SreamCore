@@ -1,7 +1,9 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import  {Prisma, PrismaClient} from '@prisma/client';
 import { Request, Response } from 'express';
-import { Prisma } from '@prisma/client';
+
 import { PinoLogger } from 'nestjs-pino';
+
 
 @Catch()
 @Injectable()
@@ -9,6 +11,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   constructor(private readonly logger: PinoLogger) {
     this.logger.setContext(GlobalExceptionFilter.name);
   }
+ 
 
   catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -27,7 +30,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       } else if (typeof responseBody === 'object' && responseBody !== null) {
         message = (responseBody as any).message || (responseBody as any).error || JSON.stringify(responseBody);
       }
-    } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+  } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       switch (exception.code) {
         case 'P2002': {
           status = HttpStatus.CONFLICT;

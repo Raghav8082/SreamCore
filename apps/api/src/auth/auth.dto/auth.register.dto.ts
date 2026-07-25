@@ -5,7 +5,10 @@ export default class RegisterDto{
 @IsEmail()
 email:string 
 
-@IsString()
+// @IsString()
 @MinLength(8)
 password: string
+
+@IsString()
+role?:string
 }
