@@ -11,6 +11,11 @@ export const envSchema = z.object({
 
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
+
+  MINIO_ENDPOINT: z.url(),
+  MINIO_ACCESS_KEY: z.string(),
+  MINIO_SECRET_KEY: z.string(),
+  MINIO_RAW_BUCKET: z.string(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

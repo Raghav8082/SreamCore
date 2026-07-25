@@ -9,12 +9,14 @@ import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from 'prisma/prisma.module';
 import { validateEnv } from './config/env.validation';
 import { ConfigModule } from '@nestjs/config';
+import { StorageModule } from './storage/storage.module';
+import { UploadModule } from './uploads/upload.module';
 
 @Module({
   imports: [ConfigModule.forRoot({
       isGlobal: true,
       validate: validateEnv,
-    }),LoggerModule.forRoot(), AuthModule,PrismaModule],
+    }),LoggerModule.forRoot(), AuthModule,PrismaModule,StorageModule,UploadModule],
   controllers: [AppController],
   providers: [AppService , 
     {
