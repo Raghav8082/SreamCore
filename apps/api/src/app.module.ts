@@ -5,9 +5,11 @@ import { RequestIdMiddleware } from './common/request-id.middleware';
 import { LoggerModule } from 'nestjs-pino';
 import { APP_FILTER } from '@nestjs/core';
 import { GlobalExceptionFilter } from './exception-filter';
+import { AuthModule } from './auth/auth.module';
+import { PrismaModule } from 'prisma/prisma.module';
 
 @Module({
-  imports: [LoggerModule.forRoot()],
+  imports: [LoggerModule.forRoot(), AuthModule,PrismaModule],
   controllers: [AppController],
   providers: [AppService , 
     {
