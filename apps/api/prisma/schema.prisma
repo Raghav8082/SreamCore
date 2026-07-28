@@ -33,6 +33,17 @@ enum UploadStatus {
   EXPIRED
 }
 
+model UploadedChunk {
+  id              String        @id @default(uuid())
+  sessionId       String
+  session         UploadSession @relation(fields: [sessionId], references: [id])
+  chunkIndex      Int
+  checksum        String
+  createdAt       DateTime      @default(now())
+
+  @@unique([sessionId, chunkIndex])
+}
+
 model UploadSession {
   id           String       @id @default(uuid())
   userId       String
@@ -44,7 +55,13 @@ model UploadSession {
   status       UploadStatus @default(PENDING)
   expiresAt    DateTime
   createdAt    DateTime     @default(now())
+  uploadedChunk UploadedChunk[]
+  finalChecksum String?
+  mergedKey     String?
+  isMerged   Boolean    @default(false)
 }
+
+
 
 model User {
   id        String   @id @default(uuid())
