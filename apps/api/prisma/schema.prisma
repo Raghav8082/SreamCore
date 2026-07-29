@@ -73,3 +73,24 @@ model User {
   refreshTokens RefreshToken[]
   uploadSessions UploadSession[]
 }
+
+enum ProcessingJobStatus {
+  QUEUED
+  ACTIVE
+  COMPLETED
+  FAILED
+  DEAD_LETTERED
+}
+
+model ProcessingJob {
+  id             String              @id @default(uuid())
+  bullJobId      String              @unique
+  videoId        String
+  status         ProcessingJobStatus @default(QUEUED)
+  attemptsMade   Int                 @default(0)
+  lastError      String?
+  deadLetteredAt DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+}
+
