@@ -4,4 +4,4 @@ import { ProcessingController } from './processing.controller';
 @Module({
   controllers: [ProcessingController]
 })
-export class ProcessingModule {}
+export class ProcessingModule { }

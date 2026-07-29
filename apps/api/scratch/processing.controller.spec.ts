@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ProcessingController } from './processing.controller';
+import { ProcessingController } from '../src/processing/processing.controller';
 
 describe('ProcessingController', () => {
   let controller: ProcessingController;
