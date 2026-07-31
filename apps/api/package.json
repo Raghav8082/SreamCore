@@ -11,6 +11,7 @@
     "start": "nest start",
     "start:worker": "ts-node -r tsconfig-paths/register scratch/worker.ts",
     "start:worker:dev": "nodemon --exec ts-node -r tsconfig-paths/register scratch/worker.ts",
+    "start:transcode-test": "ts-node -r tsconfig-paths/register scratch/transcode-test.ts",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
@@ -23,6 +24,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1095.0",
+    "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",

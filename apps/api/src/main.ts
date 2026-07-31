@@ -14,7 +14,7 @@ app.enableCors({
   credentials: true,
 });
 
-  app.use('/uploads/:sessionId/chunks/:index', raw({ type: '*/*', limit: '10mb' }));
+  app.use('/uploads/:sessionId/chunks/:index', raw({ type: '*/*', limit: '100mb' }));
   app.use(json());
   await app.listen(process.env.PORT ?? 3000);
 }
