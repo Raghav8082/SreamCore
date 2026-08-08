@@ -72,6 +72,7 @@ model User {
   updatedAt DateTime @updatedAt
   refreshTokens RefreshToken[]
   uploadSessions UploadSession[]
+  playbackProgresses PlaybackProgress[]
 }
 
 enum ProcessingJobStatus {
@@ -94,3 +95,16 @@ model ProcessingJob {
   updatedAt      DateTime            @updatedAt
 }
 
+model PlaybackProgress {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  videoId         String
+  positionSeconds Float
+  durationSeconds Float?
+  completed       Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  @@unique([userId, videoId])
+}

@@ -12,6 +12,8 @@ import { StorageService } from 'src/storage/storage.service';
 import { Readable } from 'stream';
 import { uploadTranscodedOutput } from './transcode-test';
 import { transcodeRenditions, writeMasterPlaylist } from './transcode';
+import Redis from 'ioredis';
+
 
 async function downloadToTemp(storageService: StorageService, bucket: string, key: string, localPath: string) {
   const stream = await storageService.getObjectStream(bucket, key);
@@ -55,11 +57,13 @@ async function bootstrap() {
   const appContext = await NestFactory.createApplicationContext(AppModule);
   const prisma = appContext.get(PrismaService);
   const config = appContext.get(ConfigService) as any;
+  const redisConnection = new Redis({ host: config.get('REDIS_HOST'), port: config.get('REDIS_PORT') });
   const storageService = appContext.get(StorageService);
 
   const worker = new Worker(
   'video-processing',
   async (job) => {
+      console.log(`>>> JOB START: ${job.id} (${job.data.videoId})`);
     const { videoId, userId, mergedKey } = job.data;
     const workDir = await mkdtemp(join(tmpdir(), 'transcode-'));
     const inputPath = join(workDir, 'input.mp4');
@@ -69,12 +73,18 @@ async function bootstrap() {
       const renditions = await transcodeRenditions(inputPath, workDir);
       await writeMasterPlaylist(workDir, renditions);
       await uploadTranscodedOutput(storageService, 'streamcore-processed', workDir, `${userId}/${videoId}/hls`);
+        console.log(`>>> JOB DONE: ${job.id} (${job.data.videoId})`);
     } finally {
       await rm(workDir, { recursive: true, force: true });
-    }
+    } 
   },
   { connection: { host: config.get('REDIS_HOST'), port: config.get('REDIS_PORT') }, concurrency: 2, lockDuration: 60000 },
+  // in worker.ts, after the Worker is created
+ // every 10 seconds
 );
+setInterval(async () => {
+  await redisConnection.set('worker:heartbeat', Date.now().toString());
+}, 10000);
 
   worker.on('active', async (job) => {
     await prisma.processingJob.updateMany({

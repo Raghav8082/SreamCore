@@ -13,6 +13,8 @@ import { StorageModule } from './storage/storage.module';
 import { UploadModule } from './uploads/upload.module';
 import { BullModule } from '@nestjs/bullmq';
 import { ProcessingModule } from './processing/processing.module';
+import { StreamingModule } from './streaming/streaming.module';
+import { VideoModule } from './video/video.module';
 
 @Module({
   imports: [ConfigModule.forRoot({
@@ -26,7 +28,7 @@ import { ProcessingModule } from './processing/processing.module';
       },
     }),
     inject: [ConfigService],
-  }),LoggerModule.forRoot(), AuthModule,PrismaModule,StorageModule,UploadModule,ProcessingModule],
+  }),LoggerModule.forRoot(), AuthModule,PrismaModule,StorageModule,UploadModule,ProcessingModule,StreamingModule,VideoModule],
   controllers: [AppController],
   providers: [AppService , 
     {
