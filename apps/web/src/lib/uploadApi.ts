@@ -1,13 +1,13 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
-export async function createUploadSession(token: string, fileName: string, fileSize: number) {
+export async function createUploadSession(token: string, fileName: string, fileSize: number, title?: string) {
   const res = await fetch(`${API_BASE}/uploads/sessions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ fileName, fileSize }),
+    body: JSON.stringify({ fileName, fileSize, title: title || fileName }),
   });
   if (res.status === 401) throw new Error('Unauthorized');
   if (!res.ok) throw new Error('Failed to create upload session');
@@ -38,11 +38,21 @@ export async function mergeSession(token: string, sessionId: string) {
   if (!res.ok) throw new Error('Merge failed');
   return res.json();
 }
+
 export async function getSessionStatus(token: string, sessionId: string) {
   const res = await fetch(`${API_BASE}/uploads/${sessionId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (res.status === 401) throw new Error('Unauthorized');
   if (!res.ok) throw new Error('Failed to get session status');
+  return res.json();
+}
+
+export async function searchVideos(token: string, query: string = '') {
+  const res = await fetch(`${API_BASE}/videos/search?q=${encodeURIComponent(query)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401) throw new Error('Unauthorized');
+  if (!res.ok) throw new Error('Failed to search videos');
   return res.json();
 }

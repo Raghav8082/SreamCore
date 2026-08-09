@@ -59,6 +59,8 @@ model UploadSession {
   finalChecksum String?
   mergedKey     String?
   isMerged   Boolean    @default(false)
+  title         String?
+  description   String?
 }
 
 

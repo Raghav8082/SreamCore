@@ -8,6 +8,7 @@ import { AuthService } from './auth.services';
 import { JwtModuleOptions } from '@nestjs/jwt';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
+
 @Module({
   imports: [
     UsersModule,

@@ -1,4 +1,4 @@
-import { IsString, IsNumber, Min } from 'class-validator';
+import { IsString, IsNumber, Min, IsOptional } from 'class-validator';
 
 export class CreateUploadSessionDto {
   @IsString()
@@ -7,4 +7,8 @@ export class CreateUploadSessionDto {
   @IsNumber()
   @Min(1)
   fileSize: number;
+
+  @IsOptional()
+  @IsString()
+  title?: string;
 }

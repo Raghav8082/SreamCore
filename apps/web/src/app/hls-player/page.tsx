@@ -53,8 +53,15 @@ export function HlsPlayer({ manifestUrl, videoId, onError }: HlsPlayerProps) {
 
         switch (data.type) {
           case Hls.ErrorTypes.NETWORK_ERROR:
-            console.warn("HLS network error, retrying load...", data);
-            hls.startLoad();
+            console.warn("HLS network error, retrying load in 3 seconds...", data);
+            setErrorMsg("Video transcoding is in progress. Automatically retrying playback...");
+            setTimeout(() => {
+              setErrorMsg(null);
+              if (hlsRef.current) {
+                hlsRef.current.loadSource(manifestUrl);
+                hlsRef.current.startLoad();
+              }
+            }, 3000);
             break;
           case Hls.ErrorTypes.MEDIA_ERROR:
             console.warn("HLS media error, attempting recovery...", data);
@@ -289,112 +296,362 @@ export function HlsPlayer({ manifestUrl, videoId, onError }: HlsPlayerProps) {
   );
 }
 
+import Link from "next/link";
+import { searchVideos } from "../../lib/uploadApi";
+
+interface VideoResult {
+  id: string;
+  title: string | null;
+  fileName: string;
+  createdAt: string;
+}
+
 function HlsPlayerContent() {
   const searchParams = useSearchParams();
-  const [videoIdInput, setVideoIdInput] = useState("");
   const videoId = searchParams.get("videoId");
-
   const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
   const manifestUrl = videoId ? `${API_BASE}/streaming/videos/${videoId}/manifest` : "";
+  const [videoIdInput, setVideoIdInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<VideoResult[]>([]);
+  const [isNotLoggedIn, setIsNotLoggedIn] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Perform search when user types or page loads
+  const fetchVideos = useCallback(async (q: string) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem("accessToken") : null;
+    if (!token) {
+      setIsNotLoggedIn(true);
+      return;
+    }
+    setIsNotLoggedIn(false);
+    setIsSearching(true);
+    try {
+      const results = await searchVideos(token, q);
+      setSearchResults(results || []);
+    } catch (err: any) {
+      console.error("Failed to search videos:", err);
+      if (err.message === 'Unauthorized') {
+        setIsNotLoggedIn(true);
+      }
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchVideos(searchQuery);
+  }, [searchQuery, fetchVideos]);
 
   return (
     <div style={{
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
-      justifyContent: "center",
       minHeight: "100vh",
-      background: "#121214",
+      background: "#09090b",
       color: "#fff",
-      padding: "20px",
-      fontFamily: "system-ui, sans-serif"
+      padding: "32px 20px",
+      fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
     }}>
-      <div style={{ width: "100%", maxWidth: 960, marginBottom: "20px" }}>
-        <h1 style={{ fontSize: "2rem", fontWeight: "700", marginBottom: "10px", background: "linear-gradient(90deg, #4f46e5, #ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-          StreamCore HLS Player
-        </h1>
-        <p style={{ color: "#8f8f9e", fontSize: "0.95rem" }}>
-          Secure, chunked HLS playback with dynamic quality switching.
-        </p>
+      {/* Top Header */}
+      <div style={{
+        width: "100%",
+        maxWidth: 960,
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "30px"
+      }}>
+        <div>
+          <h1 style={{
+            fontSize: "2rem",
+            fontWeight: "700",
+            marginBottom: "6px",
+            background: "linear-gradient(90deg, #818cf8, #c084fc)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent"
+          }}>
+            STREAMCORE HLS Player
+          </h1>
+          <p style={{ color: "#8f8f9e", fontSize: "0.9rem", margin: 0 }}>
+            Secure, multi-bitrate HLS streaming with title search & progress sync.
+          </p>
+        </div>
+
+        <Link
+          href="/upload"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            background: "rgba(39, 39, 42, 0.8)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            color: "#f4f4f5",
+            padding: "10px 18px",
+            borderRadius: "12px",
+            fontSize: "0.875rem",
+            fontWeight: "600",
+            textDecoration: "none",
+            transition: "all 0.2s ease"
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          <span>Upload Video</span>
+        </Link>
       </div>
 
       {videoId ? (
         <div style={{ width: "100%", maxWidth: 960 }}>
           <div style={{ marginBottom: "15px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "0.9rem", color: "#a1a1aa" }}>Playing Video ID: <code style={{ color: "#ec4899" }}>{videoId}</code></span>
-            <button 
+            <span style={{ fontSize: "0.9rem", color: "#a1a1aa" }}>
+              Playing Video ID: <code style={{ color: "#c084fc" }}>{videoId}</code>
+            </span>
+            <button
               onClick={() => window.history.pushState({}, "", "/hls-player")}
               style={{
                 background: "#27272a",
                 border: "none",
                 color: "#f4f4f5",
-                padding: "6px 12px",
-                borderRadius: "6px",
+                padding: "8px 16px",
+                borderRadius: "8px",
                 cursor: "pointer",
                 fontSize: "0.85rem",
+                fontWeight: "600",
                 transition: "background 0.2s"
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = "#3f3f46"}
-              onMouseLeave={(e) => e.currentTarget.style.background = "#27272a"}
             >
-              Back
+              Back to Video Search
             </button>
           </div>
           <HlsPlayer manifestUrl={manifestUrl} videoId={videoId ?? undefined} />
         </div>
       ) : (
-        <div style={{
-          width: "100%",
-          maxWidth: "480px",
-          background: "#1e1e24",
-          border: "1px solid #2d2d34",
-          borderRadius: "12px",
-          padding: "30px",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.3)"
-        }}>
-          <h2 style={{ fontSize: "1.25rem", marginBottom: "20px" }}>Enter Video ID to Stream</h2>
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            if (videoIdInput.trim()) {
-              window.history.pushState({}, "", `/hls-player?videoId=${encodeURIComponent(videoIdInput.trim())}`);
-            }
+        <div style={{ width: "100%", maxWidth: 960 }}>
+          {/* Title Search & ID Input Card */}
+          <div style={{
+            background: "rgba(18, 18, 24, 0.75)",
+            backdropFilter: "blur(16px)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+            borderRadius: "20px",
+            padding: "28px",
+            marginBottom: "32px",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.4)"
           }}>
-            <input
-              type="text"
-              placeholder="e.g. d3b07384-d113..."
-              value={videoIdInput}
-              onChange={(e) => setVideoIdInput(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "12px",
-                borderRadius: "8px",
-                border: "1px solid #3f3f46",
-                background: "#09090b",
-                color: "#fff",
-                fontSize: "1rem",
-                marginBottom: "16px",
-                boxSizing: "border-box"
-              }}
-            />
-            <button
-              type="submit"
-              disabled={!videoIdInput.trim()}
-              style={{
-                width: "100%",
-                padding: "12px",
-                borderRadius: "8px",
-                border: "none",
-                background: videoIdInput.trim() ? "linear-gradient(90deg, #4f46e5, #ec4899)" : "#3f3f46",
-                color: "#fff",
-                fontSize: "1rem",
-                fontWeight: "600",
-                cursor: videoIdInput.trim() ? "pointer" : "not-allowed",
-                transition: "opacity 0.2s"
-              }}
-            >
-              Stream Video
-            </button>
-          </form>
+            <h2 style={{ fontSize: "1.2rem", fontWeight: "600", marginBottom: "16px", color: "#f4f4f5" }}>
+              Search Video Library by Title
+            </h2>
+            <div style={{ display: "flex", gap: "12px", marginBottom: "16px" }}>
+              <div style={{ position: "relative", flex: 1 }}>
+                <input
+                  type="text"
+                  placeholder="Search by video title or file name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px 12px 40px",
+                    borderRadius: "10px",
+                    border: "1px solid #27272a",
+                    background: "#18181b",
+                    color: "#fff",
+                    fontSize: "0.95rem",
+                    outline: "none",
+                    boxSizing: "border-box"
+                  }}
+                />
+                <svg
+                  style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#71717a" }}
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Direct Video ID Option */}
+            <details style={{ marginTop: "12px", color: "#71717a", fontSize: "0.85rem" }}>
+              <summary style={{ cursor: "pointer", color: "#818cf8" }}>Or enter raw Video UUID directly</summary>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (videoIdInput.trim()) {
+                    window.history.pushState({}, "", `/hls-player?videoId=${encodeURIComponent(videoIdInput.trim())}`);
+                  }
+                }}
+                style={{ marginTop: "12px", display: "flex", gap: "10px" }}
+              >
+                <input
+                  type="text"
+                  placeholder="Paste Video UUID here..."
+                  value={videoIdInput}
+                  onChange={(e) => setVideoIdInput(e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #27272a',
+                    background: '#09090b',
+                    color: '#fff',
+                    fontSize: '0.875rem'
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={!videoIdInput.trim()}
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: videoIdInput.trim() ? 'linear-gradient(90deg, #6366f1, #a855f7)' : '#27272a',
+                    color: '#fff',
+                    fontWeight: '600',
+                    cursor: videoIdInput.trim() ? 'pointer' : 'not-allowed'
+                  }}
+                >
+                  Play
+                </button>
+              </form>
+            </details>
+          </div>
+
+          {/* Search Results / Video List */}
+          <div>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "16px", color: "#e4e4e7" }}>
+              {searchQuery ? `Search Results for "${searchQuery}"` : "Completed Uploads"}
+            </h3>
+
+            {isNotLoggedIn ? (
+              <div style={{
+                background: "rgba(239, 68, 68, 0.1)",
+                border: "1px solid rgba(239, 68, 68, 0.3)",
+                borderRadius: "16px",
+                padding: "28px",
+                textAlign: "center",
+                color: "#fca5a5"
+              }}>
+                <p style={{ margin: 0, fontWeight: "600", fontSize: "1rem" }}>Session Expired or Not Logged In</p>
+                <p style={{ margin: "6px 0 16px 0", fontSize: "0.875rem", color: "#e4e4e7" }}>
+                  Please sign in to search the video library and play streams.
+                </p>
+                <Link
+                  href="/login"
+                  style={{
+                    display: "inline-block",
+                    background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+                    color: "#fff",
+                    padding: "10px 22px",
+                    borderRadius: "10px",
+                    textDecoration: "none",
+                    fontWeight: "600",
+                    fontSize: "0.875rem",
+                    boxShadow: "0 4px 14px rgba(99, 102, 241, 0.4)"
+                  }}
+                >
+                  Sign In to STREAMCORE
+                </Link>
+              </div>
+            ) : isSearching ? (
+              <p style={{ color: "#a1a1aa", fontSize: "0.9rem" }}>Loading videos...</p>
+            ) : searchResults.length === 0 ? (
+              <div style={{
+                background: "rgba(24, 24, 27, 0.4)",
+                border: "1px dashed #27272a",
+                borderRadius: "16px",
+                padding: "36px",
+                textAlign: "center",
+                color: "#71717a"
+              }}>
+                <p style={{ margin: 0, fontSize: "0.95rem" }}>No matching videos found.</p>
+                <p style={{ margin: "6px 0 0 0", fontSize: "0.85rem" }}>
+                  Upload a video first or try a different title search term.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
+                {searchResults.map((video) => (
+                  <div
+                    key={video.id}
+                    style={{
+                      background: "#18181b",
+                      border: "1px solid #27272a",
+                      borderRadius: "14px",
+                      padding: "20px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      transition: "border-color 0.2s, transform 0.2s",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.2)"
+                    }}
+                  >
+                    <div>
+                      <div style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        background: "rgba(99,102,241,0.15)",
+                        color: "#818cf8",
+                        padding: "4px 8px",
+                        borderRadius: "6px",
+                        fontSize: "0.75rem",
+                        fontWeight: "600",
+                        marginBottom: "12px"
+                      }}>
+                        <span>HLS READY</span>
+                      </div>
+                      <h4 style={{
+                        fontSize: "1rem",
+                        fontWeight: "600",
+                        color: "#f4f4f5",
+                        margin: "0 0 6px 0",
+                        wordBreak: "break-word"
+                      }}>
+                        {video.title || video.fileName}
+                      </h4>
+                      <p style={{ fontSize: "0.8rem", color: "#71717a", margin: 0, wordBreak: "break-all" }}>
+                        File: {video.fileName}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => window.history.pushState({}, "", `/hls-player?videoId=${encodeURIComponent(video.id)}`)}
+                      style={{
+                        marginTop: "18px",
+                        padding: "10px",
+                        borderRadius: "10px",
+                        border: "none",
+                        background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+                        color: "#ffffff",
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                        boxShadow: "0 4px 14px rgba(99, 102, 241, 0.3)"
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                      </svg>
+                      <span>Play Video</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

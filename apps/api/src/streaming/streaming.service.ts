@@ -39,21 +39,34 @@ async getSignedMasterPlaylist(userId: string, videoId: string): Promise<string> 
   if (!session) throw new NotFoundException('Video not found');
   if (session.userId !== userId) throw new ForbiddenException('You do not own this video');
 
+  const job = await this.prisma.processingJob.findFirst({
+    where: { videoId },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (job && job.status !== 'COMPLETED') {
+    throw new NotFoundException(`Video is currently ${job.status.toLowerCase()} transcoding. Please wait a few seconds...`);
+  }
+
   const bucket = 'streamcore-processed';
   const prefix = `${session.userId}/${videoId}/hls`;
   const masterKey = `${prefix}/master.m3u8`;
 
-  const lines = await this.getCachedOrFetchPlaylistLines(bucket, masterKey);
+  try {
+    const lines = await this.getCachedOrFetchPlaylistLines(bucket, masterKey);
 
-  const rewritten = lines.map((line) => {
-    const trimmed = line.trim();
-    if (trimmed && !trimmed.startsWith('#')) {
-      return `/streaming/videos/${videoId}/rendition/${trimmed}`;
-    }
-    return line;
-  });
+    const rewritten = lines.map((line) => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        return `/streaming/videos/${videoId}/rendition/${trimmed}`;
+      }
+      return line;
+    });
 
-  return rewritten.join('\n');
+    return rewritten.join('\n');
+  } catch (err: any) {
+    throw new NotFoundException('HLS playlist is still being processed. Please wait a few seconds and try again.');
+  }
 }
 
 async getSignedRenditionPlaylist(userId: string, videoId: string, renditionPath: string): Promise<string> {

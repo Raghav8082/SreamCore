@@ -37,6 +37,7 @@ export class UploadsService {
         chunkSize: CHUNK_SIZE,
         totalChunks,
         expiresAt,
+        title: dto.title || dto.fileName,
       },
     });
 
@@ -184,7 +185,7 @@ export class UploadsService {
         bullJobId: job.id!,
       },
     });
-  }
 
-  return;
+    return { success: true, finalChecksum };
+  }
 }

@@ -1,7 +1,8 @@
-import { Controller , Get , Param , UseGuards , Request, Body, Post } from "@nestjs/common";
+import { Controller , Get , Param , UseGuards , Request, Body, Post, Query, NotFoundException, ForbiddenException, Patch } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/auth-guard";
 import { PrismaService } from "prisma/prisma.services";
 import { StorageService } from "src/storage/storage.service";
+import {VideoService} from './video.service';
 
 
 @Controller('videos')
@@ -9,8 +10,14 @@ import { StorageService } from "src/storage/storage.service";
 export class VideoController{
     constructor(
         private readonly prisma: PrismaService,
-        private readonly storage: StorageService
+        private readonly storage: StorageService,
+        private readonly video:VideoService
     ){} 
+    @Get('search')
+    async search(@Request() req, @Query('q') q: string) {
+      return this.video.searchVideos(req.user.userId, q);
+    }
+
     @Get(':id/manifest.m3u8')
     async getManifest(@Param('id') id: string , @Request() req: any){
         const video = await this.prisma.uploadSession.findUnique({ where:{id}});
@@ -49,7 +56,7 @@ async getProgress(@Request() req, @Param('videoId') videoId: string) {
   return progress ?? { positionSeconds: 0, completed: false };
 }
 @UseGuards(JwtAuthGuard)
-@Get('videos/continue-watching')
+@Get('continue-watching')
 async getContinueWatching(@Request() req) {
   return this.prisma.playbackProgress.findMany({
     where: {
@@ -61,4 +68,22 @@ async getContinueWatching(@Request() req) {
     take: 10,
   });
 }
+
+@UseGuards(JwtAuthGuard)
+@Patch(':videoId/metadata')
+async updateMetadata(
+  @Request() req,
+  @Param('videoId') videoId: string,
+  @Body() dto: { title?: string; description?: string },
+) {
+  const session = await this.prisma.uploadSession.findUnique({ where: { id: videoId } });
+  if (!session) throw new NotFoundException('Video not found');
+  if (session.userId !== req.user.userId) throw new ForbiddenException('Not your video');
+
+  return this.prisma.uploadSession.update({
+    where: { id: videoId },
+    data: { title: dto.title, description: dto.description },
+  });
+}
+
 }
